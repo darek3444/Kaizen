@@ -275,7 +275,9 @@ function renderStreak() {
     streak++;
     cursor.setDate(cursor.getDate() - 1);
   }
-  $('#kz-streak-display').textContent = streak > 0 ? `passa: ${streak} ${streak === 1 ? 'dzień' : 'dni'}` : '';
+  const today = pointsOf(tasks.filter((t) => t.done && t.completedAt === TODAY));
+  $('#kz-streak-display').textContent = [streak > 0 ? `passa: ${streak} ${streak === 1 ? 'dzień' : 'dni'}` : '', today ? `dziś: ${pkt(today)}` : '']
+    .filter(Boolean).join(' · ');
 }
 
 // ---------- timer ----------
@@ -661,6 +663,13 @@ const PRIORITIES = {
 const PRIORITY_CYCLE = ['must', 'should', 'could'];
 const priorityOf = (t) => (PRIORITIES[t.priority] ? t.priority : 'should');
 
+// Points for a finished task, by kind: Muszę 3 · Powinienem 2 · Mogę 1 · Rutyna 1
+const WEIGHTS = { must: 3, should: 2, could: 1, routine: 1 };
+const kindOf = (t) => (t.recurringId ? 'routine' : priorityOf(t));
+const weightOf = (t) => WEIGHTS[kindOf(t)];
+const pointsOf = (list) => list.reduce((sum, t) => sum + weightOf(t), 0);
+const pkt = (n) => `${n} pkt`;
+
 // today's highlight first, then Must → Should → Could; stable within a level
 function sortTasks(list) {
   const hl = getDay(TODAY).highlightId;
@@ -736,7 +745,7 @@ function renderTaskRow(t) {
     <div class="kz-task ${t.done ? 'done' : ''}">
       <input type="checkbox" ${t.done ? 'checked' : ''} class="kz-task-check" aria-label="Ukończone">
       <input type="text" class="txt" value="${escapeHtml(t.text)}">
-      ${t.recurringId ? '' : `<button class="kz-tag kz-pri ${pri.cls}" title="Priorytet — kliknij, żeby zmienić">${pri.label}</button>`}
+      ${t.recurringId ? '' : `<button class="kz-tag kz-pri ${pri.cls}" title="Priorytet (${pkt(weightOf(t))}) — kliknij, żeby zmienić">${pri.label}</button>`}
       ${t.recurringId ? '' : `<button class="kz-star${isHl ? ' on' : ''}" title="${isHl ? 'Główne zadanie dnia' : 'Ustaw jako główne zadanie dnia'}" aria-pressed="${isHl}">${isHl ? '★' : '☆'}</button>`}
       ${linkUrl ? `<a href="${escapeHtml(linkUrl)}" target="_blank" rel="noopener" class="kz-task-link-open" title="${escapeHtml(linkUrl)}">&#8599;</a>` : ''}
       <button class="del" title="Usuń">&times;</button>
@@ -1062,8 +1071,12 @@ function weekStats(start) {
   const perDay = days.map((key, i) => {
     const log = dailyLog[key] || {};
     const hl = log.highlightId && byId[log.highlightId];
+    const finished = tasks.filter((t) => t.done && t.completedAt === key);
+    const kinds = { must: 0, should: 0, could: 0, routine: 0 };
+    finished.forEach((t) => (kinds[kindOf(t)] += weightOf(t)));
     return {
       key, name: WEEKDAYS[i], future: key > TODAY, today: key === TODAY,
+      tasks: finished.length, points: pointsOf(finished), kinds,
       minutes: (log.sprints || []).reduce((s, x) => s + x.minutes, 0),
       hl: hl ? (hl.done ? 'done' : 'set') : 'none',
       micro: !!log.micro?.done,
@@ -1074,7 +1087,7 @@ function weekStats(start) {
 
   const doneTasks = tasks.filter((t) => t.done && daySet.has(t.completedAt));
   const done = { must: 0, should: 0, could: 0, routine: 0 };
-  doneTasks.forEach((t) => (t.recurringId ? done.routine++ : done[priorityOf(t)]++));
+  doneTasks.forEach((t) => done[kindOf(t)]++);
 
 
   const doneDays = new Set(doneTasks.map((t) => t.completedAt));
@@ -1082,21 +1095,10 @@ function weekStats(start) {
   const activeDays = perDay.filter((d) => d.minutes || d.hl !== 'none' || d.micro || doneDays.has(d.key)).length;
 
   return {
-    days, perDay, elapsed, activeDays, totalMin, done, doneCount: doneTasks.length,
+    days, perDay, elapsed, activeDays, totalMin, done, doneCount: doneTasks.length, points: pointsOf(doneTasks),
     hlDone: perDay.filter((d) => d.hl === 'done').length,
     microDone: perDay.filter((d) => d.micro).length,
   };
-}
-
-function weekNudges(s) {
-  const out = [];
-  if (s.elapsed >= 3 && s.hlDone >= Math.max(3, s.elapsed - 1)) out.push(['good', `Świetnie — ${s.hlDone}/${s.elapsed} głównych zadań dnia zrobionych.`]);
-  else if (s.activeDays >= 3 && s.hlDone <= 1) out.push(['warn', `Tylko ${s.hlDone} ${s.hlDone === 1 ? 'główne zadanie' : 'głównych zadań'} w tym tygodniu. Wybieraj jedno rano — to wystarczy.`]);
-  if (s.elapsed >= 4 && s.microDone >= s.elapsed - 1 && s.microDone >= 4) out.push(['good', `Mikro-nawyk: ${s.microDone}/${s.elapsed} dni. Nawyk się zakorzenia.`]);
-  else if (s.activeDays >= 4 && s.microDone <= 1) out.push(['warn', 'Mikro-nawyk prawie nie istnieje. Może jest za duży? Zmniejsz go do 2 minut.']);
-  if (s.activeDays >= 3 && s.totalMin === 0) out.push(['warn', 'Brak zapisanych bloków skupienia. Spróbuj jutro jednego — nawet 15 minut w trybie Flow.']);
-  if (!out.length) out.push(['info', s.elapsed ? 'Każdy mały krok się liczy. Tak trzymaj.' : 'Ten tydzień jeszcze się nie zaczął.']);
-  return out;
 }
 
 function renderWeek() {
@@ -1109,39 +1111,39 @@ function renderWeek() {
   $('#kz-week-label').textContent = `${fmtD(weekStart)} – ${fmtD(end)}${isCurrent ? ' · ten tydzień' : ''}`;
   $('#kz-week-next').disabled = isCurrent;
 
-  const maxMin = Math.max(60, ...s.perDay.map((d) => d.minutes));
+  const maxPts = Math.max(6, ...s.perDay.map((d) => d.points));
+  const KIND_ORDER = ['routine', 'could', 'should', 'must']; // bottom → top
   const denom = s.elapsed || 7;
 
   $('#kz-week').innerHTML = `
     <div class="kz-week-days">
       ${s.perDay.map((d) => `
-        <div class="kz-wd${d.future ? ' future' : ''}${d.today ? ' today' : ''}" title="${d.minutes} min skupienia">
-          <span class="kz-wd-min mono">${d.minutes ? d.minutes : ''}</span>
-          <div class="kz-wd-bar"><span style="--h:${pct(d.minutes, maxMin)}%"></span></div>
+        <div class="kz-wd${d.future ? ' future' : ''}${d.today ? ' today' : ''}" title="${d.tasks} ukończonych · ${pkt(d.points)}">
+          <span class="kz-wd-min mono">${d.points ? d.points : ''}</span>
+          <div class="kz-wd-bar"><span style="--h:${pct(d.points, maxPts)}%">${KIND_ORDER.filter((k) => d.kinds[k]).map((k) => `<i class="k-${k}" style="flex-grow:${d.kinds[k]}"></i>`).join('')}</span></div>
           <span class="kz-wd-dot hl ${d.hl}" title="Główne zadanie"></span>
           <span class="kz-wd-dot mc${d.micro ? ' done' : ''}" title="Mikro-nawyk"></span>
           <span class="kz-wd-name mono">${d.name}</span>
         </div>`).join('')}
     </div>
-    <div class="kz-week-legend mono"><span><i class="kz-wd-dot hl done"></i>główne zadanie</span><span><i class="kz-wd-dot mc done"></i>mikro-nawyk</span><span><i class="kz-legend-bar"></i>minuty skupienia</span></div>
+    <div class="kz-week-legend mono"><span><i class="kz-wd-dot hl done"></i>główne zadanie</span><span><i class="kz-wd-dot mc done"></i>mikro-nawyk</span></div>
+    <div class="kz-week-legend mono"><span><i class="kz-legend-bar k-must"></i>muszę · 3</span><span><i class="kz-legend-bar k-should"></i>powinienem · 2</span><span><i class="kz-legend-bar k-could"></i>mogę · 1</span><span><i class="kz-legend-bar k-routine"></i>rutyny · 1</span></div>
 
     <div class="kz-tiles">
       <div class="kz-tile"><span class="kz-tile-val">${s.hlDone}<small>/${denom}</small></span><span class="kz-tile-lbl">Główne zadania</span></div>
       <div class="kz-tile"><span class="kz-tile-val">${s.microDone}<small>/${denom}</small></span><span class="kz-tile-lbl">Mikro-nawyk</span></div>
       <div class="kz-tile"><span class="kz-tile-val">${fmtMinutes(s.totalMin).replace(' min', '<small> min</small>').replace(' h', '<small> h</small>')}</span><span class="kz-tile-lbl">Skupienie</span></div>
-      <div class="kz-tile"><span class="kz-tile-val">${s.doneCount}</span><span class="kz-tile-lbl">Ukończone</span></div>
+      <div class="kz-tile kz-tile-points"><span class="kz-tile-val">${s.points}<small> pkt</small></span><span class="kz-tile-lbl">Punkty · ${s.doneCount} zadań</span></div>
     </div>
 
     <h3 class="kz-week-h">Ukończone zadania</h3>
     <div class="kz-week-done mono">
-      <span class="kz-tag pri-high">Muszę · ${s.done.must}</span>
-      <span class="kz-tag pri-mid">Powinienem · ${s.done.should}</span>
-      <span class="kz-tag pri-low">Mogę · ${s.done.could}</span>
-      <span class="kz-tag">Rutyny · ${s.done.routine}</span>
+      <span class="kz-tag pri-high">Muszę · ${s.done.must} · ${pkt(s.done.must * WEIGHTS.must)}</span>
+      <span class="kz-tag pri-mid">Powinienem · ${s.done.should} · ${pkt(s.done.should * WEIGHTS.should)}</span>
+      <span class="kz-tag pri-low">Mogę · ${s.done.could} · ${pkt(s.done.could * WEIGHTS.could)}</span>
+      <span class="kz-tag">Rutyny · ${s.done.routine} · ${pkt(s.done.routine * WEIGHTS.routine)}</span>
     </div>
-
-    <h3 class="kz-week-h">Wnioski</h3>
-    <ul class="kz-nudges">${weekNudges(s).map(([type, text]) => `<li class="${type}">${escapeHtml(text)}</li>`).join('')}</ul>`;
+`;
 
   const note = $('#kz-week-reflection');
   if (document.activeElement !== note) note.value = config.weekNotes[todayKey(weekStart)] || '';
@@ -1241,6 +1243,7 @@ function renderCalDetail() {
   }
 
   const totalTasks = done.length + pending.length + (hl ? 1 : 0);
+  const dayPoints = pointsOf([...done, ...(hl?.done ? [hl] : [])]);
   const doneTasks = done.length + (hl?.done ? 1 : 0);
   const stat = (val, lbl, on) => `<div class="kz-day-stat${on ? ' on' : ''}"><span class="v">${val}</span><span class="l">${lbl}</span></div>`;
   const section = (title, meta, content) =>
@@ -1261,6 +1264,7 @@ function renderCalDetail() {
       ${stat(totalTasks ? `${doneTasks}<small>/${totalTasks}</small>` : '—', 'zadania', totalTasks && doneTasks === totalTasks)}
       ${stat(focusMin ? fmtMinutes(focusMin).replace(' min', '<small> min</small>').replace(' h', '<small> h</small>') : '—', 'skupienie', focusMin > 0)}
       ${stat(micro ? (micro.done ? '✓' : '✗') : '—', 'mikro-nawyk', micro?.done)}
+      ${stat(dayPoints ? `${dayPoints}<small> pkt</small>` : '—', 'punkty', dayPoints > 0)}
     </div>`;
 
   if (hl) {
