@@ -805,6 +805,10 @@ function setHighlight(id) {
 }
 
 function bindTasks() {
+  const pri = $('#kz-task-pri');
+  const tintPriority = () => (pri.dataset.pri = pri.value);
+  pri.addEventListener('change', tintPriority);
+  tintPriority();
   $('#kz-task-add').addEventListener('click', addTask);
   $('#kz-task-input').addEventListener('keydown', (e) => e.key === 'Enter' && addTask());
 
