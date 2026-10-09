@@ -467,7 +467,6 @@ button.kz-cal-day:active{transform:scale(.94);}
 .kz-timer-mode{margin-bottom:6px;}
 .kz-timer-mode button{padding:6px 18px;font-size:10.5px;}
 .kz-timer-mode-hint{margin:0 0 14px;}
-.kz-sprint-select{width:100%;margin-bottom:8px;padding:8px 6px;font-size:12px;}
 
 /* ---------- start dnia ---------- */
 .kz-ritual h2 .kz-ritual-progress{display:flex;align-items:center;gap:5px;flex:none;color:var(--ink-soft);}
@@ -510,10 +509,6 @@ button.kz-tag:hover{transform:translateY(-1px);}
 .kz-star:hover{color:var(--gold);transform:scale(1.15) rotate(8deg);}
 .kz-star.on{color:var(--gold);}
 .kz-task-block.kz-is-hl > .kz-task-block-inner{border-left:2px solid var(--gold);padding-left:10px;margin-left:-12px;}
-.kz-time-body{display:flex;flex-direction:column;gap:6px;font-size:13px;}
-.kz-time-body input{width:80px;display:inline-block;padding:4px 6px !important;}
-.kz-time-body .kz-hint{margin:0;}
-.kz-row-value.kz-over{color:var(--danger);}
 
 /* ---------- weekly review ---------- */
 .kz-week-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:6px 0 8px;}

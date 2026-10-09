@@ -3,9 +3,9 @@
 Codzienny panel oparty na zasadzie małych kroków:
 
 - **Start dnia** — jedno główne zadanie dnia i dwuminutowy mikro-nawyk.
-- **Zadania** z priorytetami Muszę / Powinienem / Mogę, rutynami powtarzalnymi, krokami i szacunkiem czasu.
-- **Bloki skupienia** — Pomodoro albo Flow (bez limitu); bloki przypisane do zadań liczą faktyczny czas.
-- **Przegląd tygodnia** — dokąd poszedł czas, serie, porównanie szacunków z rzeczywistością i wnioski.
+- **Zadania** z priorytetami Muszę / Powinienem / Mogę, rutynami powtarzalnymi i krokami (także z linkami).
+- **Bloki skupienia** — Pomodoro z alarmem działającym w tle albo Flow (bez limitu).
+- **Przegląd tygodnia** — serie głównych zadań i mikro-nawyku, czas skupienia, ukończone zadania i wnioski.
 - **Tryb prosty / pełny** oraz kalendarz z historią każdego dnia.
 Działa offline (localStorage), a po zalogowaniu synchronizuje dane przez Supabase między urządzeniami.
 

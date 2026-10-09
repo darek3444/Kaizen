@@ -318,7 +318,7 @@ function persistTimer() {
     localStorage.setItem(TIMER_KEY, JSON.stringify({
       mode: timer.mode, lenMin: timer.lenMin, remaining: timer.remaining, endAt: timer.endAt,
       flowAccum: timer.flowAccum, flowStart: timer.flowStart,
-      task: $('#kz-sprint-task').value, taskId: $('#kz-sprint-task-id').value,
+      task: $('#kz-sprint-task').value,
     }));
   } catch {}
 }
@@ -435,17 +435,6 @@ function startTimer() {
   renderTimerMode();
 }
 
-// open tasks you can attach a block to; the block's time then counts toward that task
-function renderSprintTaskSelect() {
-  const sel = $('#kz-sprint-task-id');
-  const current = sel.value || sel.dataset.restore || '';
-  const open = sortTasks(tasks.filter((t) => !t.done && !t.recurringId));
-  sel.innerHTML = '<option value="">— bez przypisanego zadania —</option>' +
-    open.map((t) => `<option value="${t.id}">${t.id === getDay(TODAY).highlightId ? '★ ' : ''}${escapeHtml(t.text)}</option>`).join('');
-  sel.value = open.some((t) => t.id === current) ? current : '';
-  delete sel.dataset.restore;
-}
-
 // first tab to mark this block's end time as handled wins (tabs tick on the same second)
 function claimFinishedBlock(endAt) {
   try {
@@ -476,8 +465,6 @@ function applySavedTimer(saved) {
   $('#kz-len-slider-val').textContent = timer.lenMin + ' min';
   $('#kz-len-slider').value = timer.lenMin;
   $('#kz-sprint-task').value = saved.task || '';
-  $('#kz-sprint-task-id').dataset.restore = saved.taskId || '';
-  renderSprintTaskSelect();
   if (timer.endAt) alarm.arm(timer.endAt);
   else alarm.disarm();
   if (timer.running) {
@@ -502,7 +489,6 @@ function bindTimer() {
     resetTimer();
   });
   $('#kz-sprint-task').addEventListener('change', persistTimer);
-  $('#kz-sprint-task-id').addEventListener('change', persistTimer);
   $('#kz-len-slider').addEventListener('input', (e) => {
     if (timer.running) return;
     setLength(parseInt(e.target.value, 10));
@@ -544,7 +530,7 @@ function bindTimer() {
 // Timing, sound and system notifications live in alarm.js; this wires them to the UI.
 function startAlarm() {
   $('#kz-alarm-banner').hidden = false;
-  const task = $('#kz-sprint-task').value.trim() || findTask($('#kz-sprint-task-id').value)?.text;
+  const task = $('#kz-sprint-task').value.trim();
   alarm.ring({
     title: 'Czas minął — blok skończony',
     body: task ? `„${task}” · ${timer.lenMin} min. Zrób przerwę.` : `${timer.lenMin} min skupienia za tobą. Zrób przerwę.`,
@@ -568,15 +554,12 @@ function renderNotifyHint() {
 
 // ---------- sprint log ----------
 function logSprint(minutes) {
-  const taskId = $('#kz-sprint-task-id').value || null;
-  const linked = taskId && findTask(taskId);
   justLoggedSprintId = uid('sprint');
   getDay(TODAY).sprints.push({
     id: justLoggedSprintId,
     minutes,
     mode: timer.mode,
-    taskId: linked ? taskId : null,
-    task: $('#kz-sprint-task').value.trim() || linked?.text || '(bez opisu)',
+    task: $('#kz-sprint-task').value.trim() || '(bez opisu)',
     time: new Date().toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }),
   });
   saveLog();
@@ -584,7 +567,6 @@ function logSprint(minutes) {
   justLoggedSprintId = null;
   renderStreak();
   renderCalendar();
-  if (linked) renderTasks(); // refresh the task's actual-time counter
 }
 function renderSprintLog() {
   const day = getDay(TODAY);
@@ -689,15 +671,6 @@ function sortTasks(list) {
     .map(([t]) => t);
 }
 
-// minutes of logged blocks per task id, across all days
-function actualMinutesByTask() {
-  const map = {};
-  Object.values(dailyLog).forEach((d) => d.sprints?.forEach((s) => {
-    if (s.taskId) map[s.taskId] = (map[s.taskId] || 0) + s.minutes;
-  }));
-  return map;
-}
-
 function createTask(text, { domain, priority = 'should' } = {}) {
   const task = { id: uid('task'), text, domain: domain || defaultDomain(), priority, notes: '', done: false, createdAt: TODAY };
   tasks.push(task);
@@ -753,15 +726,12 @@ function animateOut(el, after) {
   setTimeout(after, 280);
 }
 
-function renderTaskRow(t, actual) {
+function renderTaskRow(t) {
   const steps = countLines(t.notes);
   const linkUrl = normalizeUrl(firstUrl(t.notes));
   const isNew = t.id === justAddedId;
   const isHl = t.id === getDay(TODAY).highlightId;
   const pri = PRIORITIES[priorityOf(t)];
-  const spent = actual[t.id] || 0;
-  const timeValue = t.estimate ? `${spent} / ${t.estimate} min` : spent ? `${spent} min` : 'brak';
-  const over = t.estimate && spent > t.estimate;
   return `<div class="kz-task-block${isNew ? ' kz-new' : ''}${isHl ? ' kz-is-hl' : ''}" data-id="${t.id}"><div class="kz-task-block-inner">
     <div class="kz-task ${t.done ? 'done' : ''}">
       <input type="checkbox" ${t.done ? 'checked' : ''} class="kz-task-check" aria-label="Ukończone">
@@ -783,18 +753,6 @@ function renderTaskRow(t, actual) {
           <textarea class="kz-task-notes" placeholder="Jeden krok na linię — linki też tu wklejaj">${escapeHtml(t.notes || '')}</textarea>
         </div>
       </details>
-      ${t.recurringId ? '' : `<details class="kz-task-time-details">
-        <summary>
-          <span class="kz-row-icon">&#9719;</span>
-          <span class="kz-row-label">Czas</span>
-          <span class="kz-row-value${over ? ' kz-over' : ''}">${timeValue}</span>
-          <span class="kz-row-chevron">&#8250;</span>
-        </summary>
-        <div class="kz-row-body kz-time-body">
-          <label>Szacuję na <input type="number" min="1" max="1440" class="kz-task-estimate" value="${t.estimate || ''}" placeholder="—"> min</label>
-          <span class="kz-hint">Faktycznie: <strong>${fmtMinutes(spent)}</strong>${spent ? '' : ' — przypisz zadanie do bloku skupienia, a czas policzy się sam.'}</span>
-        </div>
-      </details>`}
     </div>
   </div></div>`;
 }
@@ -815,11 +773,10 @@ function renderTasks() {
   const wrap = $('#kz-task-list');
   // finished recurring copies stay in the data (calendar, streak) but leave the list
   const visible = sortTasks(tasks.filter((t) => !(t.recurringId && t.done)));
-  const actual = actualMinutesByTask();
   let html = '';
   const section = (name, list, important) => {
     html += `<div class="kz-domain-head${important ? ' kz-domain-important' : ''}"><span class="kz-domain-text">${escapeHtml(name)}</span></div>`;
-    list.forEach((t) => (html += renderTaskRow(t, actual)));
+    list.forEach((t) => (html += renderTaskRow(t)));
   };
   config.domains.forEach((dom) => {
     const list = visible.filter((t) => t.domain === dom);
@@ -829,7 +786,6 @@ function renderTasks() {
   if (orphans.length) section('Inne', orphans, false);
   wrap.innerHTML = html || `<div class="kz-empty">${tasks.length ? 'Brak zadań na teraz — dodaj nowe wyżej.' : 'Brak zadań — dodaj pierwsze wyżej.'}</div>`;
   renderHighlight();
-  renderSprintTaskSelect();
 }
 
 function setHighlight(id) {
@@ -864,10 +820,7 @@ function bindTasks() {
       }
       // finished routines leave the list; regular tasks just restyle in place
       if (t.recurringId && t.done) animateOut(el.closest('.kz-task-block'), renderTasks);
-      else {
-        el.closest('.kz-task').classList.toggle('done', t.done);
-        renderSprintTaskSelect();
-      }
+      else el.closest('.kz-task').classList.toggle('done', t.done);
     } else if (el.classList.contains('txt')) {
       t.text = el.value;
       // keeps the recurring template in sync for future days
@@ -875,15 +828,7 @@ function bindTasks() {
       if (rt) { rt.text = el.value; saveConfig(); }
       saveTasks();
       renderHighlight();
-      renderSprintTaskSelect();
-    } else if (el.classList.contains('kz-task-estimate')) {
-      const v = parseInt(el.value, 10);
-      t.estimate = v > 0 ? v : null;
-      saveTasks();
-      renderTasks();
-      // keep the panel open after the re-render
-      $(`.kz-task-block[data-id="${t.id}"] .kz-task-time-details`)?.setAttribute('open', '');
-    } else if (el.classList.contains('kz-task-notes')) {
+        } else if (el.classList.contains('kz-task-notes')) {
       t.notes = el.value;
       const rt = templateOf(t);
       if (rt) { rt.notes = el.value; saveConfig(); }
@@ -1125,48 +1070,31 @@ function weekStats(start) {
     };
   });
 
-  const time = { must: 0, should: 0, could: 0, none: 0 };
-  days.forEach((key) => (dailyLog[key]?.sprints || []).forEach((s) => {
-    const t = s.taskId && byId[s.taskId];
-    time[t ? priorityOf(t) : 'none'] += s.minutes;
-  }));
-  const totalMin = Object.values(time).reduce((a, b) => a + b, 0);
+  const totalMin = perDay.reduce((a, d) => a + d.minutes, 0);
 
   const doneTasks = tasks.filter((t) => t.done && daySet.has(t.completedAt));
   const done = { must: 0, should: 0, could: 0, routine: 0 };
   doneTasks.forEach((t) => (t.recurringId ? done.routine++ : done[priorityOf(t)]++));
 
-  const actual = actualMinutesByTask();
-  const estimated = doneTasks.filter((t) => t.estimate && actual[t.id]);
-  const estSum = estimated.reduce((s, t) => s + t.estimate, 0);
-  const actSum = estimated.reduce((s, t) => s + actual[t.id], 0);
 
   const doneDays = new Set(doneTasks.map((t) => t.completedAt));
   // days the app was actually used — critical nudges wait until there's enough data
   const activeDays = perDay.filter((d) => d.minutes || d.hl !== 'none' || d.micro || doneDays.has(d.key)).length;
 
   return {
-    days, perDay, elapsed, activeDays, time, totalMin, done, doneCount: doneTasks.length,
+    days, perDay, elapsed, activeDays, totalMin, done, doneCount: doneTasks.length,
     hlDone: perDay.filter((d) => d.hl === 'done').length,
     microDone: perDay.filter((d) => d.micro).length,
-    estimateRatio: estimated.length >= 2 && estSum ? actSum / estSum : null,
-    estimatedCount: estimated.length,
   };
 }
 
 function weekNudges(s) {
   const out = [];
-  const tracked = s.totalMin - s.time.none;
   if (s.elapsed >= 3 && s.hlDone >= Math.max(3, s.elapsed - 1)) out.push(['good', `Świetnie — ${s.hlDone}/${s.elapsed} głównych zadań dnia zrobionych.`]);
   else if (s.activeDays >= 3 && s.hlDone <= 1) out.push(['warn', `Tylko ${s.hlDone} ${s.hlDone === 1 ? 'główne zadanie' : 'głównych zadań'} w tym tygodniu. Wybieraj jedno rano — to wystarczy.`]);
-  if (tracked >= 60 && pct(s.time.must, tracked) >= 70) out.push(['warn', `${pct(s.time.must, tracked)}% czasu poszło na rzeczy z „Muszę”. Zarezerwuj blok na „Powinienem” — tam zwykle są długoterminowe cele.`]);
-  if (tracked >= 60 && pct(s.time.could, tracked) >= 45) out.push(['warn', `${pct(s.time.could, tracked)}% czasu na „Mogę”. Czy to nie ucieczka od trudniejszych zadań?`]);
-  if (s.estimateRatio && s.estimateRatio >= 1.3) out.push(['warn', `Zadania trwają średnio ${s.estimateRatio.toFixed(1).replace('.', ',')}× dłużej, niż zakładasz. Planuj z zapasem.`]);
-  if (s.estimateRatio && s.estimateRatio <= 0.75) out.push(['good', 'Idzie ci szybciej, niż szacujesz — możesz planować odważniej.']);
   if (s.elapsed >= 4 && s.microDone >= s.elapsed - 1 && s.microDone >= 4) out.push(['good', `Mikro-nawyk: ${s.microDone}/${s.elapsed} dni. Nawyk się zakorzenia.`]);
   else if (s.activeDays >= 4 && s.microDone <= 1) out.push(['warn', 'Mikro-nawyk prawie nie istnieje. Może jest za duży? Zmniejsz go do 2 minut.']);
   if (s.activeDays >= 3 && s.totalMin === 0) out.push(['warn', 'Brak zapisanych bloków skupienia. Spróbuj jutro jednego — nawet 15 minut w trybie Flow.']);
-  if (s.time.none >= 60 && pct(s.time.none, s.totalMin) >= 50) out.push(['info', 'Większość bloków nie ma przypisanego zadania — przypisuj je, a zobaczysz, dokąd idzie twój czas.']);
   if (!out.length) out.push(['info', s.elapsed ? 'Każdy mały krok się liczy. Tak trzymaj.' : 'Ten tydzień jeszcze się nie zaczął.']);
   return out;
 }
@@ -1183,8 +1111,6 @@ function renderWeek() {
 
   const maxMin = Math.max(60, ...s.perDay.map((d) => d.minutes));
   const denom = s.elapsed || 7;
-  const tracked = s.totalMin;
-  const bar = (label, min, cls) => `<div class="kz-bar-row"><span class="kz-bar-label">${label}</span><div class="kz-bar-track"><div class="kz-bar-fill ${cls}" style="--w:${pct(min, tracked)}%"></div></div><span class="kz-bar-pct">${pct(min, tracked)}%</span></div>`;
 
   $('#kz-week').innerHTML = `
     <div class="kz-week-days">
@@ -1206,14 +1132,6 @@ function renderWeek() {
       <div class="kz-tile"><span class="kz-tile-val">${s.doneCount}</span><span class="kz-tile-lbl">Ukończone</span></div>
     </div>
 
-    <h3 class="kz-week-h">Dokąd poszedł czas</h3>
-    ${tracked ? `<div class="kz-bars">
-      ${bar('Muszę', s.time.must, 'pri-high')}
-      ${bar('Powinienem', s.time.should, 'pri-mid')}
-      ${bar('Mogę', s.time.could, 'pri-low')}
-      ${s.time.none ? bar('Bez zadania', s.time.none, 'none') : ''}
-    </div>` : '<div class="kz-empty">Brak zapisanych bloków w tym tygodniu.</div>'}
-
     <h3 class="kz-week-h">Ukończone zadania</h3>
     <div class="kz-week-done mono">
       <span class="kz-tag pri-high">Muszę · ${s.done.must}</span>
@@ -1221,7 +1139,6 @@ function renderWeek() {
       <span class="kz-tag pri-low">Mogę · ${s.done.could}</span>
       <span class="kz-tag">Rutyny · ${s.done.routine}</span>
     </div>
-    ${s.estimateRatio ? `<p class="kz-hint">Szacunki (${s.estimatedCount} zadań): realnie zajęły ${Math.round(s.estimateRatio * 100)}% planowanego czasu.</p>` : ''}
 
     <h3 class="kz-week-h">Wnioski</h3>
     <ul class="kz-nudges">${weekNudges(s).map(([type, text]) => `<li class="${type}">${escapeHtml(text)}</li>`).join('')}</ul>`;
