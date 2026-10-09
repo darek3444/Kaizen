@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#22231C">
+<meta name="color-scheme" content="light only">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Kaizen">
+<title>Kaizen</title>
+<link rel="icon" type="image/svg+xml" href="/icon.svg">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="module" src="/src/main.js"></script>
+</head>
+<body>
+
+<div id="kz-root">
+  <div class="kz-shell">
+
+    <div class="kz-masthead">
+      <div class="kz-masthead-left">
+        <img class="kz-logo" src="/icon.svg" width="30" height="30" alt="">
+        <h1 id="kz-h1" contenteditable="true" spellcheck="false">Kaizen</h1>
+      </div>
+      <div class="kz-header-right">
+        <button type="button" class="kz-sync" id="kz-sync" hidden></button>
+        <div class="kz-seg kz-mode-toggle kz-day-only" id="kz-mode" role="tablist" aria-label="Tryb">
+          <button type="button" data-mode="simple" title="Tylko zadania, blok skupienia i opis dnia">Prosty</button>
+          <button type="button" data-mode="advanced" title="Wszystkie funkcje">Pełny</button>
+        </div>
+        <a href="#tydzien" class="kz-nav-link mono kz-day-only">Tydzień</a>
+        <a href="#kalendarz" class="kz-nav-link mono kz-day-only" id="kz-header-cal-link">Kalendarz</a>
+        <a href="#" class="kz-nav-link mono" id="kz-header-back-link" hidden>&larr; Dziś</a>
+        <div class="kz-date mono" id="kz-today"></div>
+      </div>
+    </div>
+
+    <!-- AUTH -->
+    <div id="kz-login-view" class="kz-auth" hidden>
+      <section class="kz-auth-hero">
+        <img src="/icon.svg" width="56" height="56" alt="" class="kz-auth-logo">
+        <h1 class="kz-auth-title">Kaizen</h1>
+        <p class="kz-auth-tag">Małe kroki, każdego dnia.<br>Twój osobisty system kaizen.</p>
+        <ul class="kz-auth-feats">
+          <li><span class="kz-num mono">01</span><div><strong>Start dnia w minutę</strong><span>Jedno główne zadanie i dwuminutowy mikro-nawyk.</span></div></li>
+          <li><span class="kz-num mono">02</span><div><strong>Bloki skupienia</strong><span>Pomodoro albo Flow — pracujesz w swoim rytmie, czas liczy się sam.</span></div></li>
+          <li><span class="kz-num mono">03</span><div><strong>Przegląd tygodnia</strong><span>Widzisz, dokąd naprawdę idzie twój czas — i co poprawić.</span></div></li>
+        </ul>
+      </section>
+
+      <section class="kz-card kz-auth-card">
+        <div class="kz-auth-tabs" id="kz-auth-tabs" role="tablist">
+          <button type="button" role="tab" data-mode="login">Logowanie</button>
+          <button type="button" role="tab" data-mode="register">Rejestracja</button>
+        </div>
+        <div class="kz-auth-heading" id="kz-auth-heading" hidden>
+          <button type="button" class="kz-text-btn" data-mode="login">&larr; Wróć do logowania</button>
+          <h2 id="kz-auth-heading-text"></h2>
+          <p class="kz-hint" id="kz-auth-heading-hint"></p>
+        </div>
+
+        <form id="kz-auth-form" novalidate>
+          <label class="kz-field" data-field="email">
+            <span>E-mail</span>
+            <input type="email" id="kz-auth-email" autocomplete="email" placeholder="ty@example.com">
+          </label>
+          <label class="kz-field" data-field="password">
+            <span>Hasło</span>
+            <span class="kz-pass-wrap">
+              <input type="password" id="kz-auth-password" autocomplete="current-password" placeholder="••••••••">
+              <button type="button" class="kz-text-btn kz-pass-toggle" aria-label="Pokaż hasło">pokaż</button>
+            </span>
+          </label>
+          <label class="kz-field" data-field="password2">
+            <span>Powtórz hasło</span>
+            <input type="password" id="kz-auth-password2" autocomplete="new-password" placeholder="••••••••">
+          </label>
+          <button class="kz-btn kz-auth-submit" type="submit" id="kz-auth-submit">Zaloguj się</button>
+          <div class="kz-msg" id="kz-auth-msg" role="status"></div>
+        </form>
+
+        <div class="kz-auth-links" id="kz-auth-links">
+          <button type="button" class="kz-text-btn" data-mode="reset">Nie pamiętasz hasła?</button>
+          <button type="button" class="kz-text-btn" data-mode="magic">Zaloguj linkiem z maila</button>
+        </div>
+
+        <div class="kz-auth-divider" id="kz-auth-local-wrap"><span>albo</span></div>
+        <button type="button" class="kz-btn secondary kz-auth-local" id="kz-login-local">Pracuj lokalnie, bez konta</button>
+      </section>
+    </div>
+
+    <div id="kz-app" hidden>
+
+    <div id="kz-daily-view">
+
+    <div class="kz-streak mono" id="kz-streak-display"></div>
+
+    <!-- START DNIA -->
+    <div class="kz-card kz-ritual kz-adv" style="view-transition-name:card-ritual">
+      <h2><span class="kz-num">01</span><input class="kz-title-edit" id="kz-t-ritual" value="Start dnia"><span class="kz-ritual-progress mono" id="kz-ritual-progress"></span></h2>
+
+      <div class="kz-step">
+        <div class="kz-step-head"><span class="kz-step-n mono">1</span><div><strong>Główne zadanie dnia</strong><span>Jedna rzecz, po której powiesz: to był dobry dzień.</span></div></div>
+        <div id="kz-highlight"></div>
+      </div>
+
+      <div class="kz-step">
+        <div class="kz-step-head"><span class="kz-step-n mono">2</span><div><strong>Mikro-nawyk</strong><span>Dwuminutowy krok w stronę nawyku, który budujesz.</span></div></div>
+        <div class="kz-micro" id="kz-micro">
+          <input type="checkbox" id="kz-micro-done" aria-label="Zrobione dziś">
+          <input type="text" class="txt" id="kz-micro-text" placeholder="np. 2 minuty rozciągania">
+          <span class="kz-micro-streak mono" id="kz-micro-streak"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TASKS -->
+    <div class="kz-card" style="view-transition-name:card-tasks">
+      <h2><span class="kz-num">02</span><input class="kz-title-edit" id="kz-t-tasks" value="Zadania"></h2>
+      <div class="kz-task-form">
+        <input type="text" id="kz-task-input" placeholder="Dodaj zadanie...">
+        <select id="kz-task-domain" aria-label="Kategoria"></select>
+        <select id="kz-task-pri" aria-label="Priorytet">
+          <option value="must">Muszę</option>
+          <option value="should" selected>Powinienem</option>
+          <option value="could">Mogę</option>
+        </select>
+        <button class="kz-btn" id="kz-task-add">Dodaj</button>
+      </div>
+      <div id="kz-task-list"></div>
+
+      <details class="kz-manage">
+        <summary>Zarządzaj kategoriami</summary>
+        <div class="kz-manage-list" id="kz-domain-manage"></div>
+        <div style="display:flex;gap:8px;padding-top:8px;">
+          <input type="text" id="kz-domain-new" placeholder="Nowa kategoria...">
+          <button class="kz-btn small" id="kz-domain-add">Dodaj</button>
+        </div>
+      </details>
+    </div>
+
+    <!-- POMODORO -->
+    <div class="kz-card" style="view-transition-name:card-sprint">
+      <h2><span class="kz-num">03</span><input class="kz-title-edit" id="kz-t-sprint" value="Blok skupienia"></h2>
+      <div class="kz-seg kz-timer-mode" id="kz-timer-mode" role="tablist" aria-label="Rodzaj bloku">
+        <button type="button" data-mode="pomodoro">Pomodoro</button>
+        <button type="button" data-mode="flow">Flow</button>
+      </div>
+      <p class="kz-hint kz-timer-mode-hint" id="kz-timer-mode-hint"></p>
+      <div class="kz-timer-wrap">
+        <div class="kz-dial">
+          <svg width="150" height="150" viewBox="0 0 150 150">
+            <circle class="kz-dial-track" cx="75" cy="75" r="66"></circle>
+            <circle class="kz-dial-progress" id="kz-dial-progress" cx="75" cy="75" r="66"></circle>
+          </svg>
+          <div class="kz-dial-time mono" id="kz-timer-display">45:00</div>
+        </div>
+        <div class="kz-timer-controls">
+          <select id="kz-sprint-task-id" class="kz-sprint-select" aria-label="Zadanie"></select>
+          <input type="text" id="kz-sprint-task" placeholder="Nad czym pracujesz w tym bloku?">
+          <div class="kz-len-row" id="kz-len-row">
+            <div class="kz-slider-wrap">
+              <input type="range" id="kz-len-slider" min="1" max="60" value="45" step="1">
+              <span class="kz-slider-val mono" id="kz-len-slider-val">45 min</span>
+            </div>
+          </div>
+          <div class="kz-btn-row">
+            <button class="kz-btn" id="kz-timer-start">Start</button>
+            <button class="kz-btn secondary" id="kz-timer-reset">Reset</button>
+            <button class="kz-btn secondary" id="kz-timer-save">Zapisz blok</button>
+          </div>
+          <p class="kz-hint kz-notify-hint" id="kz-notify-hint" hidden></p>
+          <div id="kz-alarm-banner" class="kz-alarm-banner" hidden>
+            <span>Czas minął</span>
+            <button class="kz-btn small" id="kz-alarm-stop">Wyłącz alarm</button>
+          </div>
+        </div>
+      </div>
+      <div id="kz-sprint-log" style="margin-top:14px;"></div>
+    </div>
+
+    <!-- DAY NOTE -->
+    <div class="kz-card" style="view-transition-name:card-note">
+      <h2><span class="kz-num">04</span><input class="kz-title-edit" id="kz-t-note" value="Opis dnia"></h2>
+      <textarea id="kz-day-note"></textarea>
+      <div class="kz-save-note" id="kz-note-saved"></div>
+    </div>
+
+    </div><!-- /kz-daily-view -->
+
+    <div id="kz-week-view" hidden>
+      <div class="kz-card">
+        <h2><span class="kz-num">01</span><input class="kz-title-edit" id="kz-t-week" value="Przegląd tygodnia"></h2>
+        <div class="kz-cal-nav">
+          <button class="kz-btn small secondary" id="kz-week-prev" aria-label="Poprzedni tydzień">&larr;</button>
+          <span class="mono" id="kz-week-label"></span>
+          <button class="kz-btn small secondary" id="kz-week-next" aria-label="Następny tydzień">&rarr;</button>
+        </div>
+        <div id="kz-week"></div>
+        <div class="kz-week-note">
+          <label class="kz-week-label" for="kz-week-reflection">Refleksja tygodnia</label>
+          <textarea id="kz-week-reflection" placeholder="Co zadziałało? Co zmienisz w przyszłym tygodniu?"></textarea>
+          <div class="kz-save-note" id="kz-week-saved"></div>
+        </div>
+      </div>
+    </div><!-- /kz-week-view -->
+
+    <div id="kz-calendar-view" hidden>
+      <div class="kz-card">
+        <h2><span class="kz-num">01</span><input class="kz-title-edit" id="kz-t-calendar" value="Kalendarz"></h2>
+        <div class="kz-cal-nav">
+          <button class="kz-btn small secondary" id="kz-cal-prev" aria-label="Poprzedni miesiąc">&larr;</button>
+          <span class="mono" id="kz-cal-month-label"></span>
+          <button class="kz-btn small secondary" id="kz-cal-next" aria-label="Następny miesiąc">&rarr;</button>
+        </div>
+        <div class="kz-cal-weekdays">
+          <span>Pn</span><span>Wt</span><span>Śr</span><span>Cz</span><span>Pt</span><span>So</span><span>Nd</span>
+        </div>
+        <div class="kz-cal-grid" id="kz-cal-grid"></div>
+        <div id="kz-cal-detail"></div>
+      </div>
+    </div><!-- /kz-calendar-view -->
+
+    <div class="kz-footer">
+      <span id="kz-account"></span>
+      <div class="kz-footer-actions">
+        <button class="kz-link-btn kz-nav-link" id="kz-export">Eksport</button>
+        <label class="kz-nav-link" style="cursor:pointer;">Import<input type="file" id="kz-import" accept="application/json,.json" hidden></label>
+        <button class="kz-link-btn kz-nav-link" id="kz-setpass" hidden>Ustaw hasło</button>
+        <button class="kz-link-btn kz-nav-link" id="kz-signout" hidden>Wyloguj</button>
+        <button class="kz-link-btn kz-nav-link" id="kz-signin" hidden>Zaloguj</button>
+      </div>
+    </div>
+
+    </div><!-- /kz-app -->
+  </div>
+</div>
+
+</body>
+</html>
