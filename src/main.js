@@ -1307,24 +1307,76 @@ function renderCalendar() {
 }
 
 function renderCalDetail() {
-  const day = dailyLog[calSelected];
-  const done = tasks.filter((t) => t.done && t.completedAt === calSelected);
-  const pending = tasks.filter((t) => !t.done && t.createdAt === calSelected);
+  const day = dailyLog[calSelected] || {};
   const label = new Date(calSelected + 'T00:00:00').toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' });
-  const field = (lbl, val) => `<div class="kz-cal-detail-row"><span class="lbl">${lbl}</span><span class="val">${val}</span></div>`;
+  const hl = day.highlightId && findTask(day.highlightId);
+  // one list: finished that day + still-open tasks created that day; the highlight is shown separately
+  const done = tasks.filter((t) => t.done && t.completedAt === calSelected && t !== hl);
+  const pending = tasks.filter((t) => !t.done && t.createdAt === calSelected && t !== hl);
+  const sprints = day.sprints || [];
+  const focusMin = sprints.reduce((s, x) => s + x.minutes, 0);
+  const micro = day.micro?.text ? day.micro : null;
+  const note = day.note?.trim();
 
-  let body = '';
-  if (done.length) body += field('Ukończone zadania', done.map((t) => `<span style="text-decoration:line-through;color:var(--ink-soft);">${escapeHtml(t.text)}</span>`).join('<br>'));
-  const hl = day?.highlightId && findTask(day.highlightId);
-  if (hl) body += field('Główne zadanie dnia', `${hl.done ? '★' : '☆'} ${escapeHtml(hl.text)}${hl.done ? '' : ' <span style="color:var(--ink-soft);">(niezrobione)</span>'}`);
-  if (day?.micro?.text) body += field('Mikro-nawyk', `${day.micro.done ? '✓' : '—'} ${escapeHtml(day.micro.text)}`);
-  if (pending.length) body += field('Nieukończone zadania', pending.map((t) => escapeHtml(t.text)).join('<br>'));
-  if (day?.sprints?.length) {
-    const total = day.sprints.reduce((s, x) => s + x.minutes, 0);
-    body += field(`Bloki skupienia · ${fmtMinutes(total)}`, day.sprints.map((s) => `${s.minutes} min — ${escapeHtml(s.task)}${s.mode === 'flow' ? ' · flow' : ''}`).join('<br>'));
+  if (!hl && !done.length && !pending.length && !sprints.length && !micro && !note) {
+    $('#kz-cal-detail').innerHTML = `<div class="kz-cal-detail"><h3>${label}</h3><div class="kz-empty">Brak wpisów tego dnia.</div></div>`;
+    return;
   }
-  if (day?.note?.trim()) body += field('Opis dnia', escapeHtml(day.note).replace(/\n/g, '<br>'));
-  $('#kz-cal-detail').innerHTML = `<div class="kz-cal-detail"><h3>${label}</h3>${body || '<div class="kz-empty">Brak wpisów tego dnia.</div>'}</div>`;
+
+  const totalTasks = done.length + pending.length + (hl ? 1 : 0);
+  const doneTasks = done.length + (hl?.done ? 1 : 0);
+  const stat = (val, lbl, on) => `<div class="kz-day-stat${on ? ' on' : ''}"><span class="v">${val}</span><span class="l">${lbl}</span></div>`;
+  const section = (title, meta, content) =>
+    `<section class="kz-day-sec"><h4>${title}${meta ? `<span>${meta}</span>` : ''}</h4>${content}</section>`;
+
+  // blocks grouped by what they were for: "Geografia · 2 bloki · 2 min"
+  const groups = [];
+  sprints.forEach((s) => {
+    const g = groups.find((x) => x.task === s.task) || groups[groups.push({ task: s.task, minutes: 0, count: 0, flow: false }) - 1];
+    g.minutes += s.minutes;
+    g.count++;
+    g.flow ||= s.mode === 'flow';
+  });
+  const blokow = (n) => (n === 1 ? 'blok' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'bloki' : 'bloków');
+
+  let html = `<div class="kz-cal-detail"><h3>${label}</h3>
+    <div class="kz-day-stats">
+      ${stat(totalTasks ? `${doneTasks}<small>/${totalTasks}</small>` : '—', 'zadania', totalTasks && doneTasks === totalTasks)}
+      ${stat(focusMin ? fmtMinutes(focusMin).replace(' min', '<small> min</small>').replace(' h', '<small> h</small>') : '—', 'skupienie', focusMin > 0)}
+      ${stat(micro ? (micro.done ? '✓' : '✗') : '—', 'mikro-nawyk', micro?.done)}
+    </div>`;
+
+  if (hl) {
+    html += `<div class="kz-day-hl${hl.done ? ' done' : ''}">
+      <span class="kz-day-hl-star">${hl.done ? '★' : '☆'}</span>
+      <div><span class="kz-day-hl-lbl">Główne zadanie dnia</span><span class="kz-day-hl-txt">${escapeHtml(hl.text)}</span></div>
+      <span class="kz-day-badge${hl.done ? ' ok' : ''}">${hl.done ? 'zrobione' : 'niezrobione'}</span>
+    </div>`;
+  }
+
+  html += '<div class="kz-day-cols">';
+  if (done.length || pending.length) {
+    html += section('Zadania', `${done.length} z ${done.length + pending.length}`, `<ul class="kz-day-list">
+      ${done.map((t) => `<li class="done"><span class="ic">✓</span>${escapeHtml(t.text)}</li>`).join('')}
+      ${pending.map((t) => `<li><span class="ic">○</span>${escapeHtml(t.text)}</li>`).join('')}
+    </ul>`);
+  }
+  if (groups.length || micro) {
+    let side = '';
+    if (groups.length) {
+      side += section('Bloki skupienia', fmtMinutes(focusMin), `<ul class="kz-day-list kz-day-blocks">
+        ${groups.map((g) => `<li><span class="ic">◷</span><span class="t">${escapeHtml(g.task)}${g.flow ? ' <em>flow</em>' : ''}</span><span class="m">${g.count > 1 ? `${g.count} ${blokow(g.count)} · ` : ''}${fmtMinutes(g.minutes)}</span></li>`).join('')}
+      </ul>`);
+    }
+    if (micro) {
+      side += section('Mikro-nawyk', '', `<ul class="kz-day-list"><li class="${micro.done ? 'done-ok' : ''}"><span class="ic">${micro.done ? '✓' : '✗'}</span>${escapeHtml(micro.text)}</li></ul>`);
+    }
+    html += `<div>${side}</div>`;
+  }
+  html += '</div>';
+
+  if (note) html += section('Opis dnia', '', `<blockquote class="kz-day-note">${escapeHtml(note).replace(/\n/g, '<br>')}</blockquote>`);
+  $('#kz-cal-detail').innerHTML = html + '</div>';
 }
 
 function bindCalendar() {
