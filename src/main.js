@@ -79,7 +79,6 @@ function loadState() {
   if (config.titles.h1 === 'Rytuał') config.titles.h1 = 'Kaizen'; // app was renamed
   config.recurringTasks ??= [];
   migrateLegacy();
-  config.mode ||= 'advanced';
   config.micro ??= '';
   config.weekNotes ||= {};
 
@@ -1247,8 +1246,21 @@ function bindWeek() {
 }
 
 // ---------- simple / advanced mode ----------
+// Per device (not synced): a background sync must never flip the mode right after
+// signing in. Every sign-in / local start begins in simple mode.
+const MODE_KEY = 'kz-mode';
+function getMode() {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'advanced' ? 'advanced' : 'simple';
+  } catch {
+    return 'simple';
+  }
+}
+function setMode(mode) {
+  try { localStorage.setItem(MODE_KEY, mode); } catch {}
+}
 function applyMode() {
-  const simple = config.mode === 'simple';
+  const simple = getMode() === 'simple';
   document.body.classList.toggle('kz-simple', simple);
   const seg = $('#kz-mode');
   seg.dataset.active = simple ? 'simple' : 'advanced';
@@ -1257,12 +1269,11 @@ function applyMode() {
 function bindMode() {
   $('#kz-mode').addEventListener('click', (e) => {
     const b = e.target.closest('[data-mode]');
-    if (!b || b.dataset.mode === config.mode) return;
-    config.mode = b.dataset.mode;
-    saveConfig();
+    if (!b || b.dataset.mode === getMode()) return;
+    setMode(b.dataset.mode);
     // cards keep their identity (view-transition-name), so they glide to new spots
     withTransition(applyMode, 'mode');
-    toast(config.mode === 'simple' ? 'Tryb prosty — zadania, blok skupienia i opis dnia.' : 'Tryb pełny — wszystkie funkcje.', 'info', 2200);
+    toast(getMode() === 'simple' ? 'Tryb prosty — zadania, blok skupienia i opis dnia.' : 'Tryb pełny — wszystkie funkcje.', 'info', 2200);
   });
 }
 
@@ -1467,6 +1478,7 @@ function bindCrossTab() {
   let pending = null;
   window.addEventListener('storage', (e) => {
     if (e.key === TIMER_KEY) return applySavedTimer(readSavedTimer());
+    if (e.key === MODE_KEY) return applyMode();
     if (!e.key || !['kz:daily-log', 'kz:tasks', 'kz:config'].includes(e.key)) return;
     clearTimeout(pending);
     pending = setTimeout(function apply() {
@@ -1609,10 +1621,11 @@ function runAuthAction(email, password, redirect) {
 
 function handleAuthSuccess(result) {
   if (authMode === 'login') {
+    setMode('simple');
     authMessage('Zalogowano.');
     location.reload();
   } else if (authMode === 'register') {
-    if (result.data.session) return location.reload(); // email confirmation turned off
+    if (result.data.session) { setMode('simple'); return location.reload(); } // email confirmation turned off
     // Supabase hides whether the address exists; an empty identities list means it does
     if (result.data.user && result.data.user.identities?.length === 0) {
       authMessage('Konto z tym adresem już istnieje — zaloguj się lub zresetuj hasło.', true);
@@ -1650,6 +1663,7 @@ function bindAuth() {
   });
   $('#kz-login-local').addEventListener('click', () => {
     sessionStorage.setItem('kz-local-mode', '1');
+    setMode('simple');
     hideAuth();
     startApp();
     $('#kz-signin').hidden = false;
@@ -1726,6 +1740,8 @@ async function boot() {
     // came from a "reset password" email: signed in, but must pick a new password first
     showAuth('newpass');
   } else if (session) {
+    // first start of this account on this device (fresh sign-in, e.g. via an email link)
+    setMode('simple');
     const { id, email } = session.user;
     if (cached.uid && cached.uid !== id) {
       // another account's cache is on this device — switch before showing anything
