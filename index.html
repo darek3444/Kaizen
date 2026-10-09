@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+  // iPhone/iPad przybliża ekran przy wejściu w pole z tekstem < 16px (u nas drobne tytuły sekcji i kategorie).
+  // maximum-scale=1 wyłącza tylko to automatyczne przybliżanie – iOS i tak pozwala przybliżać dwoma palcami.
+  // Nie ustawiamy tego na Androidzie, bo tam zablokowałoby przybliżanie gestem.
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+    document.querySelector('meta[name=viewport]').content += ', maximum-scale=1';
+  }
+</script>
 <meta name="theme-color" content="#22231C">
 <meta name="color-scheme" content="light only">
 <meta name="apple-mobile-web-app-capable" content="yes">

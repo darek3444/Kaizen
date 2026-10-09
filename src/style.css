@@ -655,3 +655,35 @@ html[data-vt=next]::view-transition-group(week-body),html[data-vt=prev]::view-tr
 @media (max-width:820px){
   .kz-auth-mode .kz-shell{justify-content:flex-start;}
 }
+
+/* ---------- telefon: większe cele dotyku (min. ~40px) ---------- */
+@media (max-width:600px){
+  .kz-seg button{font-size:11px;padding:11px 16px;}
+  .kz-nav-link{font-size:11px;padding:11px 2px 9px;}
+  .kz-card h2 .kz-title-edit{padding:8px 0;}
+  .kz-manage summary{font-size:11px;padding:12px 0;}
+  .kz-manage-row{padding:3px 0;}
+  .kz-manage-row input[type=text]{padding:9px 8px;}
+  .kz-manage-row .kz-x{font-size:20px;padding:8px 10px;}
+  .kz-btn{min-height:42px;}
+  .kz-btn.small{min-height:42px;}
+  .kz-link-btn{padding-top:11px;padding-bottom:9px;}
+  #kz-micro-done{width:24px;height:24px;flex:none;}
+
+  /* wiersz zadania w dwóch liniach: pełna nazwa, a pod nią priorytet, gwiazdka i usuwanie */
+  .kz-task{flex-wrap:wrap;row-gap:2px;}
+  .kz-task .txt{flex:1 1 calc(100% - 44px);min-width:0;font-size:16px;}
+  .kz-task > .txt + *{margin-left:32px;}
+  .kz-task .del{margin-left:auto;}
+  .kz-task > .txt + .del{margin-left:auto;}
+  .kz-task .kz-tag.kz-pri{font-size:10.5px;padding:6px 11px;}
+  .kz-star{font-size:21px;padding:6px 10px;}
+  .kz-task-panel{margin-left:32px;}
+  .kz-task-panel .kz-task-notes-details summary,.kz-task-panel summary{padding:12px;}
+
+  /* suwak: dotykalny na całej wysokości uchwytu, a nie tylko na 6px torze */
+  .kz-slider-wrap input[type=range]{height:36px;background:transparent;}
+  .kz-slider-wrap input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:999px;background:var(--line);}
+  .kz-slider-wrap input[type=range]::-webkit-slider-thumb{margin-top:-13px;}
+  .kz-slider-wrap input[type=range]::-moz-range-track{height:6px;border-radius:999px;background:var(--line);}
+}
