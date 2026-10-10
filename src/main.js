@@ -956,10 +956,9 @@ function renderHighlight() {
     </div>`;
   } else {
     wrap.innerHTML = `<div class="kz-hl-pick">
-      <input type="text" id="kz-hl-input" placeholder="Co sprawi, że dziś będzie dobry dzień?">
+      <input type="text" id="kz-hl-input" aria-label="Główne zadanie dnia">
       <button type="button" class="kz-btn small" id="kz-hl-set">Ustaw</button>
-    </div>
-    <div class="kz-hint">…albo kliknij ☆ przy zadaniu na liście.</div>`;
+    </div>`;
   }
 }
 

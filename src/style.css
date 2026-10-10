@@ -71,7 +71,7 @@
   }
   textarea:focus, input[type=text]:focus{border-bottom-color:var(--accent);}
   textarea{min-height:64px;border:1px solid var(--line);border-radius:var(--radius);padding:10px;}
-  textarea::placeholder, input::placeholder{color:var(--ink-faint);font-style:italic;}
+  textarea::placeholder, input::placeholder{color:var(--ink-faint);font-style:normal;font-size:.92em;opacity:.85;}
 
   .kz-ritual-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px;}
   .kz-ritual-row:last-child{border-bottom:none;}
@@ -115,7 +115,7 @@
   .kz-slider-val{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent);width:52px;text-align:right;flex:none;}
   .kz-len-row input[type=number]{width:110px;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:5px 10px;border:1px dashed var(--line);background:transparent;border-radius:999px;color:var(--ink);outline:none;flex:none;}
   .kz-len-row input[type=number]:focus{border-color:var(--accent);}
-  .kz-len-row input[type=number]::placeholder{color:var(--ink-faint);font-style:italic;}
+  .kz-len-row input[type=number]::placeholder{color:var(--ink-faint);}
 
   .kz-alarm-banner{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--danger);color:var(--paper-raised);padding:10px 14px;border-radius:var(--radius);margin-top:12px;font-family:'IBM Plex Mono',monospace;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;}
   .kz-alarm-banner .kz-btn{background:var(--paper-raised);color:var(--danger);}
@@ -183,7 +183,7 @@
   .kz-tag.pri-high{border-color:var(--danger);color:var(--danger);}
   .kz-task .del{background:none;border:none;color:var(--ink-soft);cursor:pointer;font-size:16px;line-height:1;padding:0 4px;flex:none;}
 
-  .kz-empty{color:var(--ink-soft);font-style:italic;font-size:13px;padding:8px 0;}
+  .kz-empty{color:color-mix(in srgb,var(--ink-soft) 65%,var(--ink-faint));font-size:12.5px;padding:8px 0;}
 
   .kz-bars{display:flex;flex-direction:column;gap:10px;}
   .kz-bar-row{display:flex;align-items:center;gap:10px;}
@@ -195,7 +195,7 @@
   .kz-review-grid{display:grid;grid-template-columns:1fr;gap:14px;}
   .kz-review-grid label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);margin-bottom:5px;}
 
-  .kz-hint{font-size:12.5px;color:var(--ink-soft);margin-top:8px;font-style:italic;}
+  .kz-hint{font-size:12px;color:color-mix(in srgb,var(--ink-soft) 65%,var(--ink-faint));margin-top:8px;}
   .kz-domain-head{display:flex;align-items:center;gap:6px;margin:16px 0 4px;}
   .kz-domain-head:first-child{margin-top:0;}
   .kz-domain-head .kz-domain-text{
@@ -240,12 +240,12 @@
   .kz-cal-detail-row{margin-bottom:10px;}
   .kz-cal-detail-row .lbl{font-family:'IBM Plex Mono',monospace;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--gold);display:block;margin-bottom:2px;}
   .kz-cal-detail-row .val{font-size:13.5px;color:var(--ink);}
-  .kz-cal-detail-row .val.empty-val{color:var(--ink-soft);font-style:italic;}
+  .kz-cal-detail-row .val.empty-val{color:var(--ink-faint);}
 
   .kz-archive-entry{border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;}
   .kz-archive-entry .wk{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;}
   .kz-archive-entry .fld{margin-bottom:6px;font-size:13px;}
-  .kz-archive-entry .fld .lbl{color:var(--ink-soft);font-style:italic;margin-right:4px;}
+  .kz-archive-entry .fld .lbl{color:var(--ink-soft);margin-right:4px;}
 
   @media (max-width:600px){
     .kz-shell{padding:18px 14px calc(60px + env(safe-area-inset-bottom));}
@@ -495,7 +495,7 @@ button.kz-cal-day:active{transform:scale(.94);}
 .kz-step-head{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;}
 .kz-step-n{flex:none;width:22px;height:22px;border-radius:50%;border:1px solid var(--accent);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:11px;margin-top:1px;}
 .kz-step-head strong{display:block;font-size:14.5px;font-weight:600;}
-.kz-step-head span{font-size:13px;color:var(--ink-soft);}
+.kz-step-head span{font-size:12.5px;color:color-mix(in srgb,var(--ink-soft) 65%,var(--ink-faint));}
 .kz-step textarea{min-height:70px;}
 .kz-step-actions{display:flex;gap:8px;justify-content:flex-end;align-items:center;margin-top:8px;flex-wrap:wrap;}
 
