@@ -1,0 +1,10 @@
+{
+  "name": "Kaizen",
+  "short_name": "Kaizen",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EFEBE2",
+  "theme_color": "#22231C",
+  "lang": "pl",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
